@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter,
+  HashRouter,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
 
-// Create a wrapper component to use useLocation
 function AppContent() {
-  const location = useLocation();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -31,39 +35,55 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route 
-        path="/" 
-        element={!user ? <Welcome /> : <Navigate to={`/${user.role}-dashboard`} />} 
+      <Route
+        path="/"
+        element={!user ? <Welcome /> : <Navigate to={`/${user.role}-dashboard`} replace />}
       />
-      // In App.jsx, update the Login route to:
-<Route 
-  path="/login" 
-  element={
-    !user ? (
-      <Login onLogin={handleLogin} />
-    ) : (
-      <Navigate to={`/${user.role}-dashboard`} />
-    )
-  } 
-/>
-      <Route 
-        path="/worker-dashboard" 
-        element={user?.role === 'worker' ? <WorkerDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" />} 
+      <Route
+        path="/login"
+        element={
+          !user ? (
+            <Login onLogin={handleLogin} />
+          ) : (
+            <Navigate to={`/${user.role}-dashboard`} replace />
+          )
+        }
       />
-      <Route 
-        path="/admin-dashboard" 
-        element={user?.role === 'admin' ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" />} 
+      <Route
+        path="/worker-dashboard"
+        element={
+          user?.role === 'worker' ? (
+            <WorkerDashboard user={user} onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
       />
+      <Route
+        path="/admin-dashboard"
+        element={
+          user?.role === 'admin' ? (
+            <AdminDashboard user={user} onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-// Main App component that wraps everything with Router
 function App() {
+  const RouterComponent =
+    typeof window !== 'undefined' && window.location.protocol === 'file:'
+      ? HashRouter
+      : BrowserRouter;
+
   return (
-    <Router>
+    <RouterComponent>
       <AppContent />
-    </Router>
+    </RouterComponent>
   );
 }
 

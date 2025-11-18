@@ -10,6 +10,7 @@ function WorkerDashboard({ user, onLogout }) {
     backend1: 'ng',
     backend2: 'good'
   })
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   // Simulate status changes (for prototype)
   useEffect(() => {
@@ -28,9 +29,16 @@ function WorkerDashboard({ user, onLogout }) {
   }, [])
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      onLogout()
-    }
+    setShowLogoutConfirm(true)
+  }
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false)
+    onLogout()
+  }
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false)
   }
 
   return (
@@ -97,6 +105,23 @@ function WorkerDashboard({ user, onLogout }) {
           </div>
         </div>
       </main>
+
+      {showLogoutConfirm && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-card">
+            <h3>Confirm Logout</h3>
+            <p>Are you sure you want to end this session?</p>
+            <div className="modal-actions">
+              <button className="button-secondary" onClick={cancelLogout}>
+                Cancel
+              </button>
+              <button className="button-danger" onClick={confirmLogout}>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
