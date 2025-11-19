@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Processing API Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="file"] { padding: 8px; width: 100%; box-sizing: border-box; }
+        input[type="file"] { padding: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        .result-section { margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 5px; }
+        .response-json { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 3px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 12px; }
+        .image-container { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px; }
+        .image-container img { max-width: 250px; max-height: 250px; border: 2px solid #007bff; padding: 5px; border-radius: 3px; }
+        .error { color: #dc3545; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 3px; }
+        .success { color: #155724; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 3px; }
+        .file-list { margin-top: 10px; font-size: 14px; }
+        .file-item { padding: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>🖼️ Image Processing API Tester</h1>
+    
+    <div class="form-group">
+        <label for="jwtToken">JWT Token (static):</label>
+        <input type="text" id="jwtToken" placeholder="Paste your JWT token here" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3NjM0ODI3MjB9.MCtdJA0KKbN_jnq6qSA3IQEry8LoBubG9VmlK5-yyTI" />
+    </div>
+
+    <div class="form-group">
+        <label for="modelName">Model Name (string):</label>
+        <input type="text" id="modelName" placeholder="e.g., yoloseg_v1, custom_model, etc." value="yoloseg_v1" />
+    </div>
+
+    <div class="form-group">
+        <label for="fileInput">Select 4 Images:</label>
+        <input type="file" id="fileInput" multiple accept="image/*" />
+        <div class="file-list" id="fileList"></div>
+    </div>
+
+    <button onclick="uploadImages()">Upload & Process</button>
+    <button onclick="clearForm()" style="background: #6c757d; margin-left: 10px;">Clear</button>
+
+    <div class="result-section" id="resultSection" style="display: none;">
+        <h2>Response:</h2>
+        <div id="statusMessage"></div>
+        <div class="response-json" id="responseJson"></div>
+        <h3>Visualized Images:</h3>
+        <div class="image-container" id="imageContainer"></div>
+    </div>
+
+    <script>
+        // Update file list when files are selected
+        document.getElementById('fileInput').addEventListener('change', function() {
+            const fileList = document.getElementById('fileList');
+            const files = this.files;
+            fileList.innerHTML = '';
+            for (let i = 0; i < files.length; i++) {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.textContent = `${i + 1}. ${files[i].name} (${(files[i].size / 1024).toFixed(2)} KB)`;
+                fileList.appendChild(item);
+            }
+        });
+
+        async function uploadImages() {
+            const files = document.getElementById('fileInput').files;
+            const jwtToken = document.getElementById('jwtToken').value.trim();
+            const modelName = document.getElementById('modelName').value.trim();
+            const resultSection = document.getElementById('resultSection');
+            const statusMessage = document.getElementById('statusMessage');
+
+            // Validation
+            if (!jwtToken) {
+                statusMessage.innerHTML = '<div class="error">❌ Please provide a JWT token</div>';
+                resultSection.style.display = 'block';
+                return;
+            }
+
+            if (!modelName) {
+                statusMessage.innerHTML = '<div class="error">❌ Please provide a model name</div>';
+                resultSection.style.display = 'block';
+                return;
+            }
+
+            if (files.length !== 4) {
+                statusMessage.innerHTML = `<div class="error">❌ Please select exactly 4 images (you selected ${files.length})</div>`;
+                resultSection.style.display = 'block';
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append("images", files[i]);
+            }
+            formData.append("model", modelName);
+
+            try {
+                statusMessage.innerHTML = '<div class="success">⏳ Processing...</div>';
+                resultSection.style.display = 'block';
+
+                const response = await fetch("http://127.0.0.1:8000/images/process", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    statusMessage.innerHTML = `<div class="error">❌ Error (${response.status}): ${data.detail || 'Unknown error'}</div>`;
+                    document.getElementById('responseJson').textContent = JSON.stringify(data, null, 2);
+                    return;
+                }
+
+                // Display status first
+                if (data.status === "ok") {
+                    statusMessage.innerHTML = '<div class="success">✅ Status: OK - All images processed successfully</div>';
+                } else {
+                    statusMessage.innerHTML = '<div class="error">⚠️ Status: NOT GOOD - Issues detected in images</div>';
+                }
+
+                // Display model
+                if (data.model) {
+                    const modelInfo = document.createElement('p');
+                    modelInfo.innerHTML = `<strong>Model Returned:</strong> <span style="background: #e7f3ff; padding: 5px 10px; border-radius: 3px; font-family: monospace;">${data.model}</span>`;
+                    modelInfo.style.marginTop = "10px";
+                    statusMessage.appendChild(modelInfo);
+                }
+
+                // Store full response for reference (collapsed)
+                const responseSection = document.createElement('details');
+                responseSection.style.marginTop = "10px";
+                const summary = document.createElement('summary');
+                summary.textContent = "View Full JSON Response";
+                summary.style.cursor = "pointer";
+                summary.style.color = "#666";
+                responseSection.appendChild(summary);
+                const responseJson = document.createElement('div');
+                responseJson.className = 'response-json';
+                responseJson.textContent = JSON.stringify(data, null, 2);
+                responseSection.appendChild(responseJson);
+                statusMessage.appendChild(responseSection);
+
+                // Display images
+                const container = document.getElementById("imageContainer");
+                container.innerHTML = "";
+
+                if (data.images && data.images.length > 0) {
+                    data.images.forEach((img, idx) => {
+                        const wrapper = document.createElement("div");
+                        wrapper.style.textAlign = "center";
+
+                        const label = document.createElement("p");
+                        label.textContent = img.filename || `Image ${idx + 1}`;
+                        label.style.fontWeight = "bold";
+                        label.style.marginBottom = "5px";
+
+                        const imageElement = document.createElement("img");
+                        // Try base64 format - visualized should be base64 string
+                        imageElement.src = `data:image/png;base64,${img.visualized}`;
+                        
+                        imageElement.onerror = () => {
+                            console.error(`Failed to load image ${idx}`);
+                            imageElement.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ccc' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23999'%3EImage load failed%3C/text%3E%3C/svg%3E";
+                        };
+
+                        wrapper.appendChild(label);
+                        wrapper.appendChild(imageElement);
+                        container.appendChild(wrapper);
+                    });
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusMessage.innerHTML = `<div class="error">❌ Network/Client Error: ${err.message}</div>`;
+                resultSection.style.display = 'block';
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileList').innerHTML = '';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('responseJson').textContent = '';
+            document.getElementById('imageContainer').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
