@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import './Login.css';
+import { Link } from 'react-router-dom';
+import { authAPI } from '../services/api';
 
 function Login({ onLogin }) {
   const [searchParams] = useSearchParams();
@@ -14,6 +16,9 @@ function Login({ onLogin }) {
     password: '',
     role: roleFromUrl
   });
+
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState(null)
 
   // Reset form when component mounts or when role changes
   useEffect(() => {
@@ -50,18 +55,55 @@ function Login({ onLogin }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (formData.username && formData.password) {
+    if (!formData.username || !formData.password) return;
+    
+    setLoading(true);
+    setErrorMsg(null);
+    
+    try {
+      // Use the appropriate API based on role
+      const apiCall = formData.role === 'admin' 
+        ? authAPI.adminLogin({ username: formData.username, password: formData.password })
+        : authAPI.login({ username: formData.username, password: formData.password });
+      
+      const response = await apiCall;
+      const data = response.data;
+
+      // Ensure backend returned an access_token
+      if (!data || !data.access_token) {
+        const errMsg = data?.error || data?.detail || 'Invalid credentials';
+        throw new Error(errMsg);
+      }
+
       const userData = {
         username: formData.username,
         role: formData.role,
-        id: Math.random().toString(36).substr(2, 9)
+        id: data?.id || Math.random().toString(36).substr(2, 9),
+        raw: data
       };
+
+      // Store user + token
+      const timestamp = new Date().toLocaleString();
+      console.log(`\n[${timestamp}] ✅ FRONTEND: Login successful`);
+      console.log(`  Role: ${userData.role}`);
+      console.log(`  Username: ${userData.username}`);
+      console.log(`  Token received: ${data.access_token ? 'Yes' : 'No'}`);
+      
+      localStorage.setItem('user', JSON.stringify(userData));
       onLogin(userData);
-      // Navigate to dashboard after login
       navigate(`/${userData.role}-dashboard`);
+    } catch (err) {
+      const timestamp = new Date().toLocaleString();
+      console.error(`\n[${timestamp}] ❌ FRONTEND: Login failed`);
+      console.error(`  Error: ${err.message}`);
+      console.error(`  Response:`, err.response?.data);
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || err.message || 'Login failed';
+      setErrorMsg(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,9 +165,21 @@ function Login({ onLogin }) {
             />
           </div>
 
-          <button type="submit" className="login-button">
-            Login
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? 'Logging in…' : 'Login'}
           </button>
+
+          {errorMsg && (
+            <div className="login-error" role="alert" style={{ color: 'var(--danger, #c23)'}}>
+              {errorMsg}
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <small>
+              Don't have an account? <Link to={`/register?role=${formData.role}`}>Register</Link>
+            </small>
+          </div>
         </form>
 
         <div className="login-footer">

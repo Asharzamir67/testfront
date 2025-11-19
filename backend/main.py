@@ -43,3 +43,19 @@ app.include_router(image_routes.router)
 @app.get("/", summary="Root Endpoint")
 async def root():
     return {"message": "Welcome to the FastAPI MVC Backend!"}
+
+# -------------------- Startup Event --------------------
+@app.on_event("startup")
+async def startup_event():
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print("\n" + "="*60)
+    print(f"[{timestamp}] 🚀 FastAPI Backend Server Started")
+    print("="*60)
+    print("  Available endpoints:")
+    print("    POST /user/register  - User registration")
+    print("    POST /user/login     - User login")
+    print("    POST /admin/register - Admin registration")
+    print("    POST /admin/login    - Admin login")
+    print("    POST /images/process - Process images (requires auth)")
+    print("="*60 + "\n")
