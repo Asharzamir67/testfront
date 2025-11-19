@@ -44,6 +44,7 @@ async def process_images(
 
     final_status = "ok"
     output_images = []
+    defects_count = 0
 
     # Iterate through results one by one (results[i] is for images[i])
     for idx, result in enumerate(results):
@@ -53,6 +54,11 @@ async def process_images(
         rendered = result.plot()
         rendered_base64 = image_to_base64(rendered)
 
+        # Check for defects before adding to output
+        has_defects = len(result.boxes) > 0 or (result.masks is not None and len(result.masks) > 0)
+        if has_defects:
+            defects_count += 1
+
         output_images.append({
             "filename": original_name,
             "predictions": result.to_json(),
@@ -60,11 +66,11 @@ async def process_images(
         })
 
         # --- Your decision logic: mark "notgood" if any defect is detected ---
-        if len(result.boxes) > 0 or (result.masks is not None):
+        if has_defects:
             final_status = "notgood"
 
     print(f"  ✅ Processing complete - Status: {final_status}")
-    print(f"  Defects detected in {sum(1 for img in output_images if len(img.get('predictions', {}).get('boxes', [])) > 0)} image(s)")
+    print(f"  Defects detected in {defects_count} image(s)")
     
     return JSONResponse({
         "status": final_status,
