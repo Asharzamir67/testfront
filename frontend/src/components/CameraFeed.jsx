@@ -1,8 +1,19 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef } from 'react'
 import './CameraFeed.css'
 
-function CameraFeed({ name, cameraId, status, stream }) {
+const CameraFeed = forwardRef(function CameraFeed({ name, cameraId, status, stream }, ref) {
   const videoRef = useRef(null)
+  
+  // Expose video element via ref
+  useEffect(() => {
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(videoRef.current)
+      } else {
+        ref.current = videoRef.current
+      }
+    }
+  }, [ref, stream])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -163,7 +174,7 @@ function CameraFeed({ name, cameraId, status, stream }) {
       </div>
     </div>
   )
-}
+})
 
 export default CameraFeed
 
