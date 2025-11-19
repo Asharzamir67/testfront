@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CameraFeed from '../components/CameraFeed'
 import logo from '../components/logo.png'
@@ -34,6 +34,14 @@ function WorkerDashboard({ user, onLogout }) {
   const [selectedModel, setSelectedModel] = useState('default')
   const [processing, setProcessing] = useState(false)
   const [processResult, setProcessResult] = useState(null)
+  const [capturedImages, setCapturedImages] = useState([])
+  const [captureModalOpen, setCaptureModalOpen] = useState(false)
+  
+  // Refs for camera video elements
+  const frontend1Ref = useRef(null)
+  const frontend2Ref = useRef(null)
+  const backend1Ref = useRef(null)
+  const backend2Ref = useRef(null)
 
   // Helper functions for Electron / Web compatibility
   const getMedia = async (constraints) => {
@@ -126,6 +134,108 @@ function WorkerDashboard({ user, onLogout }) {
   const confirmLogout = () => { setShowLogoutConfirm(false); onLogout() }
   const cancelLogout = () => setShowLogoutConfirm(false)
 
+  // Create an empty image (1x1 transparent PNG as base64)
+  const createEmptyImage = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1280
+    canvas.height = 720
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#000000'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '48px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('No Camera', canvas.width / 2, canvas.height / 2)
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        const file = new File([blob], 'empty.jpg', { type: 'image/jpeg' })
+        resolve(file)
+      }, 'image/jpeg', 0.8)
+    })
+  }
+
+  // Capture frame from video element
+  const captureVideoFrame = (videoElement, cameraId) => {
+    return new Promise((resolve) => {
+      // Check if video element exists and has valid dimensions
+      if (!videoElement || 
+          !videoElement.videoWidth || 
+          !videoElement.videoHeight ||
+          videoElement.videoWidth === 0 ||
+          videoElement.videoHeight === 0 ||
+          videoElement.readyState < 2) {
+        console.log(`Camera ${cameraId}: No video available (readyState: ${videoElement?.readyState || 'N/A'}), creating empty image`)
+        createEmptyImage().then(resolve)
+        return
+      }
+
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = videoElement.videoWidth
+        canvas.height = videoElement.videoHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+        
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            console.error(`Camera ${cameraId}: Failed to create blob, using empty image`)
+            createEmptyImage().then(resolve)
+            return
+          }
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+          const filename = `${cameraId}_${timestamp}.jpg`
+          const file = new File([blob], filename, { type: 'image/jpeg' })
+          console.log(`Camera ${cameraId}: Captured image ${filename} (${(blob.size / 1024).toFixed(2)} KB)`)
+          resolve(file)
+        }, 'image/jpeg', 0.9)
+      } catch (err) {
+        console.error(`Camera ${cameraId}: Error capturing frame:`, err)
+        createEmptyImage().then(resolve)
+      }
+    })
+  }
+
+  // Capture all camera feeds
+  const handleCaptureFeeds = async () => {
+    const timestamp = new Date().toLocaleString()
+    console.log(`\n[${timestamp}] 📸 FRONTEND: Capturing all camera feeds`)
+    
+    const cameraRefs = {
+      frontend1: frontend1Ref,
+      frontend2: frontend2Ref,
+      backend1: backend1Ref,
+      backend2: backend2Ref
+    }
+
+    const captured = []
+    for (const [cameraId, ref] of Object.entries(cameraRefs)) {
+      const videoElement = ref.current
+      const image = await captureVideoFrame(videoElement, cameraId)
+      captured.push(image)
+    }
+
+    setCapturedImages(captured)
+    setCaptureModalOpen(true)
+    
+    console.log(`  ✅ Captured ${captured.length} images`)
+    captured.forEach((img, idx) => {
+      console.log(`    ${idx + 1}. ${img.name} (${(img.size / 1024).toFixed(2)} KB)`)
+    })
+  }
+
+  // Process captured images
+  const handleProcessCaptured = async () => {
+    if (capturedImages.length !== 4) {
+      alert('Expected 4 captured images')
+      return
+    }
+
+    setCaptureModalOpen(false)
+    setProcessingModalOpen(true)
+    setSelectedFiles(capturedImages)
+    setSelectedModel('default')
+  }
+
   if (!user || user.role !== 'worker') return null
 
   return (
@@ -142,25 +252,30 @@ function WorkerDashboard({ user, onLogout }) {
       </header>
 
       <main className="dashboard-content">
-        <div style={{ marginBottom: 16 }}>
-          <button className="login-button" onClick={() => setProcessingModalOpen(true)}>Process Images</button>
-          {processResult && (
-            <div style={{ marginTop: 8 }}>
-              <strong>Status:</strong> {processResult.status}
-            </div>
-          )}
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button className="login-button" onClick={() => setProcessingModalOpen(true)}>Process Images</button>
+            {processResult && (
+              <div style={{ marginTop: 0 }}>
+                <strong>Status:</strong> {processResult.status}
+              </div>
+            )}
+          </div>
+          <button className="login-button" onClick={handleCaptureFeeds}>Capture Feed</button>
         </div>
         <div className="camera-grid">
           <div className="camera-section">
             <h2 className="section-title">Frontend Cameras</h2>
             <div className="camera-group">
               <CameraFeed
+                ref={frontend1Ref}
                 name="Frontend Camera 1"
                 cameraId="frontend1"
                 status={cameraStatuses.frontend1}
                 stream={cameraStreams.frontend1}
               />
               <CameraFeed
+                ref={frontend2Ref}
                 name="Frontend Camera 2"
                 cameraId="frontend2"
                 status={cameraStatuses.frontend2}
@@ -173,12 +288,14 @@ function WorkerDashboard({ user, onLogout }) {
             <h2 className="section-title">Backend Cameras</h2>
             <div className="camera-group">
               <CameraFeed
+                ref={backend1Ref}
                 name="Backend Camera 1"
                 cameraId="backend1"
                 status={cameraStatuses.backend1}
                 stream={cameraStreams.backend1}
               />
               <CameraFeed
+                ref={backend2Ref}
                 name="Backend Camera 2"
                 cameraId="backend2"
                 status={cameraStatuses.backend2}
@@ -269,6 +386,16 @@ function WorkerDashboard({ user, onLogout }) {
                     backend2: 'good'
                   }))
                 }
+                
+                // Close modal first
+                setProcessingModalOpen(false);
+                
+                // Navigate to results page with the result data
+                setTimeout(() => {
+                  navigate('/processing-results', { 
+                    state: { result: response.data } 
+                  });
+                }, 100);
               } catch (err) {
                 const timestamp = new Date().toLocaleString();
                 console.error(`\n[${timestamp}] ❌ FRONTEND: Image processing failed`);
@@ -294,6 +421,41 @@ function WorkerDashboard({ user, onLogout }) {
                 <button type="submit" className="login-button" disabled={processing}>{processing ? 'Processing…' : 'Submit'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {captureModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-card">
+            <h3>Captured Images</h3>
+            <p>Successfully captured {capturedImages.length} images from camera feeds.</p>
+            <div style={{ marginBottom: 16, fontSize: 14, color: 'var(--text-secondary)' }}>
+              {capturedImages.map((img, idx) => (
+                <div key={idx} style={{ marginBottom: 4 }}>
+                  {idx + 1}. {img.name} ({(img.size / 1024).toFixed(2)} KB)
+                </div>
+              ))}
+            </div>
+            <p style={{ marginBottom: 16 }}>Would you like to process these captured images?</p>
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                className="button-secondary" 
+                onClick={() => {
+                  setCaptureModalOpen(false)
+                  setCapturedImages([])
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="login-button" 
+                onClick={handleProcessCaptured}
+              >
+                Process Images
+              </button>
+            </div>
           </div>
         </div>
       )}

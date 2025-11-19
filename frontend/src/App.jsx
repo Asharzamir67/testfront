@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ProcessingResults from './pages/ProcessingResults';
 import './App.css';
 
 function AppContent() {
@@ -79,6 +80,10 @@ function AppContent() {
             <Navigate to="/" replace />
           )
         }
+      />
+      <Route
+        path="/processing-results"
+        element={<ProcessingResults />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

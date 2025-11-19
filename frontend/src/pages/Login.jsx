@@ -183,7 +183,19 @@ function Login({ onLogin }) {
         </form>
 
         <div className="login-footer">
-          <p>Use any credentials for prototype</p>
+          <Link 
+            to="/" 
+            style={{ 
+              color: 'var(--text-secondary, #64748b)', 
+              textDecoration: 'none',
+              transition: 'color 0.2s',
+              fontSize: '14px'
+            }}
+            onMouseEnter={(e) => e.target.style.color = 'var(--danger-color, #ef4444)'}
+            onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary, #64748b)'}
+          >
+            ← Back to Welcome
+          </Link>
         </div>
       </div>
     </div>

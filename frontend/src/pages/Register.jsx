@@ -84,9 +84,23 @@ function Register() {
           <button className="login-button" disabled={loading}>{loading ? 'Creating…' : 'Register'}</button>
           {error && <div className="login-error" role="alert">{error}</div>}
           
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
             <small>
               Already have an account? <Link to={`/login?role=${form.role}`}>Login</Link>
+            </small>
+            <small>
+              <Link 
+                to="/" 
+                style={{ 
+                  color: 'var(--text-secondary, #64748b)', 
+                  textDecoration: 'none',
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.color = 'var(--danger-color, #ef4444)'}
+                onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary, #64748b)'}
+              >
+                ← Back to Welcome
+              </Link>
             </small>
           </div>
         </form>
