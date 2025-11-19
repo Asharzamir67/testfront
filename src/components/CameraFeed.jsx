@@ -1,15 +1,114 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './CameraFeed.css'
 
-function CameraFeed({ name, cameraId, status }) {
+function CameraFeed({ name, cameraId, status, stream }) {
+  const videoRef = useRef(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 500)
-    return () => clearTimeout(timer)
+    console.log(`CameraFeed ${cameraId}: stream received:`, stream ? 'YES' : 'NO', 'videoRef:', videoRef.current ? 'READY' : 'NULL')
+    
+    if (!stream) {
+      console.log(`CameraFeed ${cameraId}: No stream yet, waiting...`)
+      setLoading(true)
+      setError(null)
+      return
+    }
+    
+    
+    // Wait for video element to be ready
+    let cleanup = null
+    let timeoutId = null
+    
+    const setupVideo = () => {
+      if (!videoRef.current) {
+        setTimeout(setupVideo, 100)
+        return
+      }
+      
+      const video = videoRef.current
+      console.log(`CameraFeed ${cameraId}: Setting srcObject`)
+      
+      // Set the stream
+      video.srcObject = stream
+      
+      // Ensure video plays
+      const handleLoadedMetadata = () => {
+        console.log(`CameraFeed ${cameraId}: Metadata loaded, attempting to play`)
+        setLoading(false)
+        setError(null)
+        video.play().then(() => {
+          console.log(`CameraFeed ${cameraId}: Video is playing successfully`)
+        }).catch(err => {
+          console.error(`CameraFeed ${cameraId}: Video play error:`, err)
+          setError('Video playback error: ' + err.message)
+          setLoading(false)
+        })
+      }
+      
+      const handlePlay = () => {
+        console.log(`CameraFeed ${cameraId}: Video play event fired`)
+      }
+      
+      const handlePlaying = () => {
+        console.log(`CameraFeed ${cameraId}: Video is actually playing now`)
+        setLoading(false)
+        setError(null)
+      }
+      
+      const handleError = (e) => {
+        console.error(`CameraFeed ${cameraId}: Video error:`, e)
+        setError('Video playback error')
+        setLoading(false)
+      }
+      
+      // Add event listeners
+      video.addEventListener('loadedmetadata', handleLoadedMetadata)
+      video.addEventListener('play', handlePlay)
+      video.addEventListener('playing', handlePlaying)
+      video.addEventListener('error', handleError)
+      
+      // Try to play immediately if metadata already loaded
+      if (video.readyState >= 2) {
+        console.log(`CameraFeed ${cameraId}: Video readyState is ${video.readyState}, playing immediately`)
+        handleLoadedMetadata()
+      } else {
+        // Wait for metadata
+        console.log(`CameraFeed ${cameraId}: Waiting for metadata, readyState: ${video.readyState}`)
+      }
+      
+      // Store cleanup function
+      cleanup = () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        video.removeEventListener('play', handlePlay)
+        video.removeEventListener('playing', handlePlaying)
+        video.removeEventListener('error', handleError)
+      }
+    }
+    
+    // Start setup
+    setupVideo()
+    
+    // Return cleanup function
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      if (cleanup) {
+        cleanup()
+      }
+    }
+  }, [stream, cameraId])
+
+  // Cleanup stream when component unmounts
+  useEffect(() => {
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks()
+        tracks.forEach(track => track.stop())
+      }
+    }
   }, [])
 
   const getStatusClass = () => {
@@ -30,21 +129,30 @@ function CameraFeed({ name, cameraId, status }) {
       </div>
       
       <div className="camera-viewport">
-        {loading ? (
-          <div className="loading-spinner">Loading Camera Feed...</div>
-        ) : (
-          <div className="camera-placeholder">
-            {/* This will be replaced with actual camera feed */}
-            <div className="placeholder-content">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-              <p>Camera Feed</p>
-              <small className="camera-id">ID: {cameraId}</small>
-            </div>
-          </div>
-        )}
+        <div className="camera-viewport">
+  <video
+    ref={videoRef}
+    autoPlay
+    playsInline
+    muted
+    className="camera-video"
+    style={{ display: error ? 'none' : 'block' }}
+  />
+
+  {loading && !error && (
+    <div className="loading-spinner">Loading Camera Feed...</div>
+  )}
+
+  {error && (
+    <div className="camera-placeholder">
+      <div className="placeholder-content">
+        <p>{error}</p>
+        <small className="camera-id">ID: {cameraId}</small>
+      </div>
+    </div>
+  )}
+</div>
+
       </div>
 
       <div className="camera-footer">

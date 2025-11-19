@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import logo from '../components/logo.png'
 import './AdminDashboard.css'
 
 function AdminDashboard({ user, onLogout }) {
+  const navigate = useNavigate()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  // Redirect to home if user is not logged in
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleLogout = () => {
     setShowLogoutConfirm(true)
@@ -16,6 +25,11 @@ function AdminDashboard({ user, onLogout }) {
 
   const cancelLogout = () => {
     setShowLogoutConfirm(false)
+  }
+
+  // Don't render if user is not logged in (will redirect)
+  if (!user || user.role !== 'admin') {
+    return null
   }
 
   return (

@@ -1,10 +1,11 @@
 // src/pages/Login.jsx
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import './Login.css';
 
 function Login({ onLogin }) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const roleFromUrl = searchParams.get('role') || 'worker';
   const usernameRef = useRef(null);
   
@@ -53,11 +54,14 @@ function Login({ onLogin }) {
     e.preventDefault();
     
     if (formData.username && formData.password) {
-      onLogin({
+      const userData = {
         username: formData.username,
         role: formData.role,
         id: Math.random().toString(36).substr(2, 9)
-      });
+      };
+      onLogin(userData);
+      // Navigate to dashboard after login
+      navigate(`/${userData.role}-dashboard`);
     }
   };
 

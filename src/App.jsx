@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   BrowserRouter,
   HashRouter,
@@ -15,14 +15,6 @@ import './App.css';
 function AppContent() {
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
-
   const handleLogin = (userData) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -37,7 +29,7 @@ function AppContent() {
     <Routes>
       <Route
         path="/"
-        element={!user ? <Welcome /> : <Navigate to={`/${user.role}-dashboard`} replace />}
+        element={<Welcome />}
       />
       <Route
         path="/login"
