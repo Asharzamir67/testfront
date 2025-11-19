@@ -30,10 +30,18 @@ function createWindow() {
   // **Important:** allow camera/mic
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     if (permission === 'media') {
-      console.log('Electron: granting camera/microphone permission');
+      // Silently grant camera/microphone permission (no console log to reduce noise)
       callback(true);
     } else {
       callback(false);
+    }
+  });
+  
+  // Suppress DevTools console errors (harmless internal errors)
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    // Filter out harmless DevTools errors
+    if (message.includes('Autofill.setAddresses') || message.includes('DevTools')) {
+      return; // Don't log these
     }
   });
 

@@ -8,25 +8,44 @@ import {
 } from 'react-router-dom';
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
 
 function AppContent() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  });
 
   const handleLogin = (userData) => {
+    const timestamp = new Date().toLocaleString();
+    console.log(`\n[${timestamp}] 🟢 FRONTEND: User logged in`);
+    console.log(`  Role: ${userData.role}`);
+    console.log(`  Username: ${userData.username}`);
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
+    const timestamp = new Date().toLocaleString();
+    const username = user?.username || 'Unknown';
+    const role = user?.role || 'Unknown';
+    console.log(`\n[${timestamp}] 🔴 FRONTEND: User logged out`);
+    console.log(`  Role: ${role}`);
+    console.log(`  Username: ${username}`);
     setUser(null);
     localStorage.removeItem('user');
   };
 
   return (
     <Routes>
+    <Route path="/register" element={<Register />} />
       <Route
         path="/"
         element={<Welcome />}

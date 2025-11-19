@@ -25,7 +25,15 @@ async def process_images(
     model: str = Form(..., description="Model name"),
     current_user=Depends(get_current_user)
 ):
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"\n[{timestamp}] 🖼️  IMAGE PROCESSING REQUEST")
+    print(f"  User ID: {current_user.id}")
+    print(f"  Model: {model}")
+    print(f"  Images received: {len(images)}")
+    
     if len(images) != 4:
+        print(f"  ❌ Error: Expected 4 images, got {len(images)}")
         raise HTTPException(status_code=400, detail="Exactly 4 images required")
 
      # Read all image bytes first (batch)
@@ -55,6 +63,9 @@ async def process_images(
         if len(result.boxes) > 0 or (result.masks is not None):
             final_status = "notgood"
 
+    print(f"  ✅ Processing complete - Status: {final_status}")
+    print(f"  Defects detected in {sum(1 for img in output_images if len(img.get('predictions', {}).get('boxes', [])) > 0)} image(s)")
+    
     return JSONResponse({
         "status": final_status,
         "model": model,  # Return the model name in response
