@@ -17,7 +17,7 @@ function Welcome() {
         <div className="role-buttons">
           <button className="role-button worker-button" onClick={() => selectRole('worker')}>
             <div className="button-icon">👷</div>
-            <h2>Worker</h2>
+            <h2>Team Member</h2>
             <p>Access camera feeds and monitor production status</p>
           </button>
 

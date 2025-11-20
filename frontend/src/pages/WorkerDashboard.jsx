@@ -244,7 +244,7 @@ function WorkerDashboard({ user, onLogout }) {
         <div className="header-left">
           <img src={logo} alt="Logo" className="dashboard-logo" />
           <div className="header-content">
-            <h1>Worker Dashboard</h1>
+            <h1>Team Member Dashboard</h1>
             <p className="user-info">Welcome, {user.username}</p>
           </div>
         </div>
