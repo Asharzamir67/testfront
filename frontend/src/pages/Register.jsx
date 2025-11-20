@@ -58,7 +58,7 @@ function Register() {
       <div className="login-card">
         <div className="login-header">
           <h1>Create {form.role === 'admin' ? 'Admin' : 'User'} Account</h1>
-          <p>Register as {form.role === 'admin' ? 'Admin' : 'Worker'}</p>
+          <p>Register as {form.role === 'admin' ? 'Admin' : 'Team Member'}</p>
         </div>
         <form onSubmit={handleSubmit} className="login-form">
           <div className={`role-badge role-badge-${form.role}`} style={{ marginBottom: '16px' }}>
@@ -68,7 +68,7 @@ function Register() {
             <div className="role-info">
               <span className="role-label">Registering as</span>
               <span className="role-value">
-                {form.role.charAt(0).toUpperCase() + form.role.slice(1)}
+                {form.role === 'worker' ? 'Team Member' : (form.role.charAt(0).toUpperCase() + form.role.slice(1))}
               </span>
             </div>
           </div>

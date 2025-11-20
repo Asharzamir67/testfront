@@ -17,6 +17,11 @@ function Login({ onLogin }) {
     role: roleFromUrl
   });
 
+  // Display label mapping for roles (keep internal role value 'worker')
+  const displayRole = formData.role === 'worker'
+    ? 'Team Member'
+    : (formData.role.charAt(0).toUpperCase() + formData.role.slice(1))
+
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState(null)
 
@@ -131,7 +136,7 @@ function Login({ onLogin }) {
             <div className="role-info">
               <span className="role-label">Logging in as</span>
               <span className="role-value">
-                {formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}
+                {displayRole}
               </span>
             </div>
           </div>
